@@ -67,3 +67,21 @@
           name: credential.helper
           scope: global
           value: store
+
+    - name: Music Folder
+      file:
+          src: /home/pi/AV-configs/Music
+          dest: /home/pi/Music
+          state: link
+
+    - name: Pictures Folder
+      file:
+          src: /home/pi/AV-configs/Pictures
+          dest: /home/pi/Pictures
+          state: link
+
+    - name: Videos Folder
+      file:
+          src: /home/pi/AV-configs/Videos
+          dest: /home/pi/Videos
+          state: link
