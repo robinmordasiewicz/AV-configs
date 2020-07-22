@@ -1,16 +1,36 @@
 ---
 - name: "Raspberry PI4 Video Mixer Automation"
   hosts: localhost
-  become: true
+  become: false
   connection: local
   gather_facts: true
 
   vars_prompt:
 
-    - name: PIUSER
-      prompt: "Username:                   "
+    - name: FULLNAME
+      prompt: "Full Name:                   "
       private: no
-      default: "{{ lookup('env','USER', errors='ignore') | default('pi')}}"
+      default: "{{ lookup('env','USER', errors='ignore') | default('')}}"
+
+    - name: JOBTITLE
+      prompt: "Job Title:                   "
+      private: no
+      default: "{{ lookup('env','USER', errors='ignore') | default('SOLUTIONS ENGINEER')}}"
+
+    - name: EMAIL
+      prompt: "Email:                   "
+      private: no
+      default: "{{ lookup('env','USER', errors='ignore') | default('user@example.com')}}"
+
+    - name: YOUTUBEUSERNAME
+      prompt: "YouTube Username:        "
+      private: no
+      default: "{{ lookup('env','USER', errors='ignore') | default('user@example.com')}}"
+
+    - name: FACEBOOKUSERNAME
+      prompt: "Facebook Username:        "
+      private: no
+      default: "{{ lookup('env','USER', errors='ignore') | default('user@example.com')}}"
 
     - name: ATEMIP
       prompt: "Atem mini IP:    "
@@ -19,158 +39,31 @@
 
   vars:
     HOSTNAME: "{{ lookup('pipe','raspi-config nonint get_hostname', errors='ignore') }}"
-    HDMI_GROUP: 1
-    HDMI_MOD: 34
     GITHUBUSERNAME: "robinmordasiewicz"
     GITHUBPROJECT: "AV-configs"
   
   tasks:
 
-    - name: Get audio output
-      command: amixer contents
-      become_user: pi
-      register: audiooutput
-      changed_when: False
-      tags:
-        - raspi-config-audio
-        - raspi-config
+    - name: GIT name
+      git_config:
+          name: user.name
+          scope: global
+          value: "{{ FULLNAME }}"
 
-    - name: Get Headphone volume settings
-      become_user: pi
-      shell: amixer scontents | grep -Po \\[-?\\d+\\.\\d+dB\\]\\s+\\[o\(n\|f\)
-      args:
-        executable: /bin/bash
-      register: amixervolume
-      changed_when: false
-      tags:
-        - music-alsa
+    - name: GIT email
+      git_config:
+          name: user.email
+          scope: global
+          value: "{{ EMAIL }}"
 
-    - name: Set Headphones output
-      become_user: pi
-      command: amixer set Headphone,0 0dB unmute
-      when: amixervolume.stdout != '[0.00dB] [on'
-      tags:
-        - music-alsa
-
-    - name: Save Alsa state
-      command: alsactl store
-      when: amixervolume.stdout != '[0.00dB] [on'
-      tags:
-        - music-alsa
-
-    - name: Create Music directory
-      file:
-        path: /home/pi/Music
-        state: directory
-        mode: 0775
-        owner: pi
-        group: audio
-      notify: restartmpd
-      tags:
-        - music-mpd
-
-    - name: Download default song
-      get_url:
-        url: https://raw.githubusercontent.com/{{ GITHUBUSERNAME }}/{{ GITHUBPROJECT }}/master/pi/Music/elysium.wav
-        dest: /home/pi/Music/elysium.wav
-        owner: pi
-        group: pi
-        mode: 0644
-      notify: restartmpd
-      tags:
-        - music-mpd
-
-    - name: Download default playlist
-      get_url:
-        url: https://raw.githubusercontent.com/{{ GITHUBUSERNAME }}/{{ GITHUBPROJECT }}/master/pi/Music/default_playlist.m3u
-        dest: /home/pi/Music/default_playlist.m3u
-        owner: pi
-        group: audio
-        mode: 0664
-      notify: restartmpd
-      tags:
-        - music-mpd
-
-    - name: Pictures directory
-      file:
-       path: /home/pi/Pictures
-       state: directory
-       mode: 0755
-       group: pi
-       owner: pi
-      tags:
-        - background
-
-    - name: Download default background
-      get_url:
-        url: https://github.com/{{ GITHUBUSERNAME }}/{{ GITHUBPROJECT }}/raw/master/pi/Pictures/default_background.png
-        dest: /home/pi/Pictures/default_background.png
-        group: pi
-        owner: pi
-        mode: 0644
-      tags:
-        - background
-
-    - name: Videos directory
-      file:
-       path: /home/pi/Videos
-       state: directory
-       mode: 0755
-       group: pi
-       owner: pi
-      tags:
-        - background
-
-    - name: Download default video
-      get_url:
-        url: https://github.com/{{ GITHUBUSERNAME }}/{{ GITHUBPROJECT }}/raw/master/pi/Videos/default_video.mp4
-        dest: /home/pi/Videos/default_video.mp4
-        group: pi
-        owner: pi
-        mode: 0644
-      tags:
-        - background
-
-    - name: ATEM mini /etc/hosts
-      lineinfile:
-        dest: /etc/hosts
-        regexp: '^(?:[0-9]{1,3}\.){3}[0-9]{1,3}.*atem$'
-        line: "{{ ATEMIP }}\tatem"
-        state: present
-      tags:
-        - companion
-
-    - name: Companion DB directory
-      file:
-        path: /var/local/companion/undefined/companion/
-        state: directory
-        mode: 0755
-        group: root
-        owner: root
-      tags:
-        - companion-db
-        - companion
-
-    - name: Download companion DB
-      get_url:
-        url: https://github.com/{{ GITHUBUSERNAME }}/{{ GITHUBPROJECT }}/raw/master/pi/{{ HOSTNAME }}_full-config.companionconfig
-        dest: /var/local/companion/undefined/companion/db
-        mode: 0644
-      notify: restart-companion
-      register: companiondb
-      tags:
-        - companion-db
-        - companion
-
-    - name: Put ATEM IP in companion DB
-      replace:
-        path: /var/local/companion/undefined/companion/db
-        regexp: '"bmd-atem","product":"ATEM","label":"atem","_configIdx":0,"host":"(?:[0-9]{1,3}\.){3}[0-9]{1,3}"'
-        replace: '"bmd-atem","product":"ATEM","label":"atem","_configIdx":0,"host":"{{ ATEMIP }}"'
-        backup: yes
-        mode: 0644
-      notify: restart-companion
-      tags:
-        - companion-db
-        - companion
-
+    - name: GIT editor
+      git_config:
+          name: core.editor
+          scope: global
+          value: vim
+      
+    - name: GIT credential cache
+      git_config:
+          name: credential.helper
+          scope: global
+          value: store
