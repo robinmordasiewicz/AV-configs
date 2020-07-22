@@ -85,3 +85,9 @@
           src: /home/pi/AV-configs/Videos
           dest: /home/pi/Videos
           state: link
+
+    - name: fonts Folder
+      file:
+          src: /home/pi/AV-configs/fonts
+          dest: /home/pi/fonts
+          state: link
