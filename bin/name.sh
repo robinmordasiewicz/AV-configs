@@ -26,7 +26,6 @@ fi
 
 WIDTH=$(( ${OFFSET} + ${LEFTMARGIN} + ${TEXTWIDTH} + ${RIGHTMARGIN} ))
 
-#    -adaptive-blur 0x2 \
 convert  -size 1920x1080 \
     -alpha on \
     -channel a \
@@ -42,14 +41,14 @@ convert  -size 1920x1080 \
     -strokewidth 0 \
     -kerning .9 \
     -pointsize 48 \
-    -font "./fonts/NeusaNextCondensedBold.otf" \
+    -font "/home/pi/fonts/NeusaNextCondensedBold.otf" \
     -annotate +${NAMEOFFSET}+820 "${NAME}" \
     -fill "#46484c" \
     -stroke "#46484c" \
     -strokewidth 1 \
     -kerning 1.8 \
     -pointsize 30 \
-    -font "./fonts/NeusaNextCondensed.otf" \
+    -font "/home/pi/fonts/NeusaNextCondensed.otf" \
     -annotate +${NAMEOFFSET}+881 "${TITLE}" \
-PNG32:nametag.png
+PNG32:/home/pi/AV-configs/ATEM\ Media\ Pool/index0.png
 
