@@ -103,18 +103,17 @@
         - userland-gecos
         - userland
 
-    - name: generate images
-      command: "/home/pi/bin/generate-images.sh \"{{FULLNAME}}\" \"{{TITLE}}\""
-      when: gecos.changed
-      tags:
-        - userland-gecos
-        - userland
-
     - name: GIT credential cache
       git_config:
           name: credential.helper
           scope: global
           value: store
+
+    - name: bin Folder
+      file:
+          src: /home/pi/AV-configs/bin
+          dest: /home/pi/bin
+          state: link
 
     - name: Music Folder
       file:
@@ -139,8 +138,6 @@
           src: /home/pi/AV-configs/fonts
           dest: /home/pi/fonts
           state: link
-<<<<<<< HEAD
-=======
 
     - name: .hushlogin
       copy:
@@ -190,4 +187,10 @@
       tags:
         - userland-vim
         - userland
->>>>>>> feature/localFolders
+
+    - name: generate images
+      command: "/home/pi/bin/generate-images.sh \"{{FULLNAME}}\" \"{{TITLE}}\""
+      when: gecos.changed
+      tags:
+        - userland-gecos
+        - userland
