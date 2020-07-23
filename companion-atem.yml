@@ -73,6 +73,7 @@
       git:
         repo: https://github.com/robinmordasiewicz/AV-configs.git
         dest: /home/pi/AV-configs
+      ignore_errors: yes
       register: av-configs
 
     - name: GIT config
@@ -92,13 +93,6 @@
           name: pi
           comment: "{{FULLNAME}},{{COMPANY}},{{WORKEMAIL}},{{HOMEEMAIL}},{{TITLE}}"
       register: gecos
-      tags:
-        - userland-gecos
-        - userland
-
-    - name: Debug
-      debug:
-        var: gecos
       tags:
         - userland-gecos
         - userland
