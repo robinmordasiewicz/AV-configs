@@ -7,20 +7,35 @@
 
   vars_prompt:
 
+    - name: ATEMIP
+      prompt: "Atem mini IP:    "
+      private: no
+      default: "{{ lookup('pipe','grep atem /etc/hosts | expand -t 1 | cut -f 1 -d \" \"', errors='ignore') | default('192.168.2.240', true)  }}"
+
     - name: FULLNAME
       prompt: "Full Name:                   "
       private: no
-      default: "{{ lookup('env','USER', errors='ignore') | default('')}}"
+      default: "{{ lookup('pipe', 'getent passwd pi | cut -f 5 -d \":\" | cut -f 1 -d \",\"' ) }}"
 
-    - name: JOBTITLE
-      prompt: "Job Title:                   "
+    - name: COMPANY
+      prompt: "Employer:                   "
       private: no
-      default: "{{ lookup('env','USER', errors='ignore') | default('SOLUTIONS ENGINEER')}}"
+      default: "{{ lookup('pipe', 'getent passwd pi | cut -f 5 -d \":\" | cut -f 2 -d \",\"' ) }}"
 
-    - name: EMAIL
-      prompt: "Email:                   "
+    - name: WORKEMAIL
+      prompt: "Work Email:                   "
       private: no
-      default: "{{ lookup('env','USER', errors='ignore') | default('user@example.com')}}"
+      default: "{{ lookup('pipe', 'getent passwd pi | cut -f 5 -d \":\" | cut -f 3 -d \",\"' ) }}"
+
+    - name: HOMEEMAIL
+      prompt: "Github Email:                   "
+      private: no
+      default: "{{ lookup('pipe', 'getent passwd pi | cut -f 5 -d \":\" | cut -f 4 -d \",\"' ) }}"
+
+    - name: TITLE
+      prompt: "Title:                   "
+      private: no
+      default: "{{ lookup('pipe', 'getent passwd pi | cut -f 5 -d \":\" | cut -f 5 -d \",\"' ) }}"
 
     - name: YOUTUBEUSERNAME
       prompt: "YouTube Username:        "
@@ -32,10 +47,20 @@
       private: no
       default: "{{ lookup('env','USER', errors='ignore') | default('user@example.com')}}"
 
-    - name: ATEMIP
-      prompt: "Atem mini IP:    "
+    - name: LINKEDINUSERNAME
+      prompt: "Linkedin Username:        "
       private: no
-      default: "{{ lookup('pipe','grep atem /etc/hosts | expand -t 1 | cut -f 1 -d \" \"', errors='ignore') | default('192.168.2.240', true)  }}"
+      default: "{{ lookup('env','USER', errors='ignore') | default('user@example.com')}}"
+
+    - name: TWITCHUSERNAME
+      prompt: "Twitch Username:        "
+      private: no
+      default: "{{ lookup('env','USER', errors='ignore') | default('user@example.com')}}"
+
+    - name: TWITTERUSERNAME
+      prompt: "Twitter Username:        "
+      private: no
+      default: "{{ lookup('env','USER', errors='ignore') | default('user@example.com')}}"
 
   vars:
     HOSTNAME: "{{ lookup('pipe','raspi-config nonint get_hostname', errors='ignore') }}"
@@ -44,24 +69,47 @@
   
   tasks:
 
-    - name: GIT name
-      git_config:
-          name: user.name
-          scope: global
-          value: "{{ FULLNAME }}"
+    - name: Download AV-configs
+      git:
+        repo: https://github.com/robinmordasiewicz/AV-configs.git
+        dest: /home/pi/AV-configs
+      register: av-configs
 
-    - name: GIT email
+    - name: GIT config
       git_config:
-          name: user.email
+          name: "{{ item.name }}"
           scope: global
-          value: "{{ EMAIL }}"
+          value: "{{ item.value }}"
+      with_items:
+          - {name: "user.name",  value: "{{ FULLNAME }}" }
+          - {name: "user.email", value: "{{ HOMEEMAIL }}" }
+          - {name: "ui.color",   value: "True" }
+          - {name: "core.editor",   value: "vim" }
 
-    - name: GIT editor
-      git_config:
-          name: core.editor
-          scope: global
-          value: vim
-      
+    - name: Gecos
+      become: yes
+      user:
+          name: pi
+          comment: "{{FULLNAME}},{{COMPANY}},{{WORKEMAIL}},{{HOMEEMAIL}},{{TITLE}}"
+      register: gecos
+      tags:
+        - userland-gecos
+        - userland
+
+    - name: Debug
+      debug:
+        var: gecos
+      tags:
+        - userland-gecos
+        - userland
+
+    - name: generate images
+      command: "/home/pi/bin/generate-images.sh \"{{FULLNAME}}\" \"{{TITLE}}\""
+      when: gecos.changed
+      tags:
+        - userland-gecos
+        - userland
+
     - name: GIT credential cache
       git_config:
           name: credential.helper
@@ -91,3 +139,52 @@
           src: /home/pi/AV-configs/fonts
           dest: /home/pi/fonts
           state: link
+
+    - name: .hushlogin
+      copy:
+        content: ""
+        dest: /home/pi/.hushlogin
+        force: no
+        mode: 0644
+      tags:
+        - userland-hush
+        - userland
+
+    - name: pull vimrc from git
+      git:
+        repo: https://github.com/amix/vimrc.git
+        dest: /home/pi/.vim_runtime
+        force: yes
+      register: vimrcgit
+      changed_when: ( vimrcgit.remote_url_changed is not defined or vimrcgit.remote_url_changed ) 
+      tags:
+        - userland-vim
+        - userland
+
+    - name: activate vimrc
+      command:
+        chdir: /home/pi
+        cmd: /home/pi/.vim_runtime/install_awesome_vimrc.sh
+        creates: /home/pi/.vimrc
+      tags:
+        - userland-vim
+        - userland
+
+    - name: pull vim plugin for yml
+      git:
+        repo: https://github.com/pearofducks/ansible-vim.git
+        dest: /home/pi/.vim_runtime/my_plugins/ansible-vim
+      register: vimymlgit
+      tags:
+        - userland-vim
+        - userland
+
+    - name: update vim plugins
+      command:
+        cmd: python update_plugins.py
+        chdir: /home/pi/.vim_runtime
+      when: ( vimrcgit.remote_url_changed is not defined or vimrcgit.remote_url_changed ) or
+            ( vimymlgit.remote_url_changed is not defined or vimymlgit.remote_url_changed )
+      tags:
+        - userland-vim
+        - userland
