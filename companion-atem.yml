@@ -187,6 +187,24 @@
       tags:
         - userland-vim
         - userland
+        
+    - name: bashrc
+      become_user: pi
+      lineinfile:
+        path: '~/.bashrc'
+        line: "LS_COLORS=$LS_COLORS:'di=0;36' ; export LS_COLORS"
+      tags:
+        - env 
+        
+    - name: Configure Ansible
+      become_user: pi
+      ini_file:
+        path: ~/ansible.cfg
+        section: "colors"
+        option: "verbose"
+        value: "green"
+      tags:
+         - env  
 
     - name: generate images
       command: "/home/pi/bin/generate-images.sh \"{{FULLNAME}}\" \"{{TITLE}}\""
