@@ -212,3 +212,12 @@
       tags:
         - userland-gecos
         - userland
+        
+     - name: Change Dark Blue to Light Blue
+       become_user: pi
+       replace:
+         path: '~/.bashrc'
+         regexp: "033\\[01;34m"
+         replace: '033[00;36m'
+       tags:
+         - env
